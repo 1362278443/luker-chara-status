@@ -11,9 +11,12 @@ const MODULE_NAME  = 'chara-status';
 const STATE_NS     = 'chara_status_settings';
 const LS_BTN_POS   = 'cs-btn-pos';
 const LS_PANEL_POS = 'cs-panel-pos';
+const LS_BTN_POS_MOBILE   = 'cs-btn-pos-mobile';
+const LS_PANEL_POS_MOBILE = 'cs-panel-pos-mobile';
 const LS_PANEL_SIZE   = 'cs-panel-size';
 const LS_EDITOR_SIZE  = 'cs-editor-size';
 const LS_THEME     = 'cs-theme';
+const LS_CUSTOM_THEME = 'cs-custom-theme';
 
 // 5 套主题
 const THEMES = [
@@ -44,6 +47,12 @@ const THEMES = [
             '--cs-shadow:0 8px 32px rgba(14,165,233,0.18);' +
             '--cs-btn-ring:rgba(14,165,233,0.18);--cs-btn-glow:rgba(14,165,233,0.38);' },
 ];
+
+const DEFAULT_CUSTOM_THEME = {
+    accent: '#FF6BAD',
+    text:   '#4A2040',
+    bg:     '#FFFBFD',
+};
 
 // 默认模板：使用纯原生 CSS (cs-* 类) 负责所有布局与主题颜色
 const DEFAULT_TEMPLATE = `<div class="cs-card">
@@ -101,6 +110,7 @@ let $root = null; // 独立挂载容器（参考 yuzi-phone 的 #yuzi-phone-root
 let $btn = null, $panel = null, $editorModal = null, $themePopover = null;
 let _cmEditor = null; // CodeMirror 实例
 let _suppressEditorClose = false; // 防止 resize/拖拽结束后误关弹窗
+let _initStarted = false;
 
 // ─── 独立挂载容器 ─────────────────────────────────────────────────────────
 // 参考 yuzi-phone 的 createPhoneRoot() 模式：
@@ -112,8 +122,42 @@ function ensureRoot() {
     var existing = document.getElementById('cs-root');
     if (existing) { $root = $(existing); return $root; }
     $root = $('<div id="cs-root"></div>');
-    $('body').append($root);
+    (document.body ? $('body') : $('html')).append($root);
     return $root;
+}
+
+function getLukerContextSafe() {
+    try {
+        if (window.Luker && typeof window.Luker.getContext === 'function') {
+            return window.Luker.getContext();
+        }
+        if (window.SillyTavern && typeof window.SillyTavern.getContext === 'function') {
+            return window.SillyTavern.getContext();
+        }
+        if (window.st && typeof window.st.getContext === 'function') {
+            return window.st.getContext();
+        }
+    } catch (err) {
+        console.warn('[' + MODULE_NAME + '] context not ready yet:', err);
+    }
+    return null;
+}
+
+function waitForContext() {
+    return new Promise(function(resolve) {
+        var tries = 0;
+        function tick() {
+            var ctx = getLukerContextSafe();
+            if (ctx && ctx.eventSource && ctx.eventTypes) return resolve(ctx);
+            tries += 1;
+            if (tries >= 80) {
+                console.warn('[' + MODULE_NAME + '] Luker context unavailable; UI loaded without event bindings.');
+                return resolve(null);
+            }
+            setTimeout(tick, 100);
+        }
+        tick();
+    });
 }
 
 
@@ -214,9 +258,97 @@ function initCodeEditor() {
 
 // ─── 主题系统 ─────────────────────────────────────────────────────────────
 
+function normalizeHex(value, fallback) {
+    var hex = String(value || '').trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(hex)) return hex.toUpperCase();
+    if (/^#[0-9a-fA-F]{3}$/.test(hex)) {
+        return ('#' + hex.slice(1).split('').map(function(ch){ return ch + ch; }).join('')).toUpperCase();
+    }
+    return fallback;
+}
+
+function hexToRgb(hex) {
+    hex = normalizeHex(hex, '#000000').slice(1);
+    return {
+        r: parseInt(hex.slice(0, 2), 16),
+        g: parseInt(hex.slice(2, 4), 16),
+        b: parseInt(hex.slice(4, 6), 16),
+    };
+}
+
+function rgbToHex(rgb) {
+    return '#' + [rgb.r, rgb.g, rgb.b].map(function(v) {
+        return Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
+    }).join('').toUpperCase();
+}
+
+function mixHex(a, b, weight) {
+    var ca = hexToRgb(a), cb = hexToRgb(b);
+    return rgbToHex({
+        r: ca.r * (1 - weight) + cb.r * weight,
+        g: ca.g * (1 - weight) + cb.g * weight,
+        b: ca.b * (1 - weight) + cb.b * weight,
+    });
+}
+
+function rgbaHex(hex, alpha) {
+    var c = hexToRgb(hex);
+    return 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + alpha + ')';
+}
+
+function getCustomTheme() {
+    try {
+        var saved = JSON.parse(localStorage.getItem(LS_CUSTOM_THEME) || '{}');
+        return {
+            accent: normalizeHex(saved.accent, DEFAULT_CUSTOM_THEME.accent),
+            text:   normalizeHex(saved.text,   DEFAULT_CUSTOM_THEME.text),
+            bg:     normalizeHex(saved.bg,     DEFAULT_CUSTOM_THEME.bg),
+        };
+    } catch(e) {
+        return Object.assign({}, DEFAULT_CUSTOM_THEME);
+    }
+}
+
+function saveCustomTheme(theme) {
+    localStorage.setItem(LS_CUSTOM_THEME, JSON.stringify({
+        accent: normalizeHex(theme.accent, DEFAULT_CUSTOM_THEME.accent),
+        text:   normalizeHex(theme.text,   DEFAULT_CUSTOM_THEME.text),
+        bg:     normalizeHex(theme.bg,     DEFAULT_CUSTOM_THEME.bg),
+    }));
+}
+
+function customThemeToVars(theme) {
+    var accent = normalizeHex(theme.accent, DEFAULT_CUSTOM_THEME.accent);
+    var text   = normalizeHex(theme.text,   DEFAULT_CUSTOM_THEME.text);
+    var bg     = normalizeHex(theme.bg,     DEFAULT_CUSTOM_THEME.bg);
+    var accentDark = mixHex(accent, '#000000', 0.18);
+    var accentPale = mixHex(accent, bg, 0.88);
+    var textFaint  = mixHex(text, bg, 0.45);
+    return [
+        '--cs-pink:' + accent,
+        '--cs-pink-dark:' + accentDark,
+        '--cs-pink-pale:' + accentPale,
+        '--cs-text:' + text,
+        '--cs-text-faint:' + textFaint,
+        '--cs-bg:' + rgbaHex(bg, 0.98),
+        '--cs-border:' + rgbaHex(accent, 0.16),
+        '--cs-shadow:0 8px 32px ' + rgbaHex(accent, 0.18),
+        '--cs-btn-ring:' + rgbaHex(accent, 0.18),
+        '--cs-btn-glow:' + rgbaHex(accent, 0.38),
+    ].join(';') + ';';
+}
+
+function getThemeDefinition(themeId) {
+    if (themeId === 'custom') {
+        var custom = getCustomTheme();
+        return { id: 'custom', label: 'Custom', dot: custom.accent, vars: customThemeToVars(custom) };
+    }
+    return THEMES.find(function(t){ return t.id === themeId; });
+}
+
 function applyTheme(themeId) {
     currentTheme = themeId;
-    var theme = THEMES.find(function(t){ return t.id === themeId; });
+    var theme = getThemeDefinition(themeId);
     if (!theme) return;
 
     var $style = $('#cs-theme-vars');
@@ -231,6 +363,8 @@ function applyTheme(themeId) {
     if ($themePopover) {
         $themePopover.find('.cs-theme-dot').removeClass('cs-theme-active');
         $themePopover.find('[data-theme="' + themeId + '"]').addClass('cs-theme-active');
+        var custom = getCustomTheme();
+        $themePopover.find('[data-theme="custom"]').css('background', custom.accent);
     }
     localStorage.setItem(LS_THEME, themeId);
 }
@@ -243,8 +377,9 @@ function loadTheme() {
 // ─── 核心：从 Luker 原生变量系统收集状态 ──────────────────────────────────
 
 function collectState() {
-    var ctx = Luker.getContext();
+    var ctx = getLukerContextSafe();
     var state = {};
+    if (!ctx) return state;
 
     // 对齐 Luker 宏命名约定：{{char}} = 角色名，{{user}} = 用户名
     if (ctx.name2) { state.char = ctx.name2; state.name = ctx.name2; } // name 向下兼容
@@ -269,10 +404,14 @@ function collectState() {
 }
 
 function buildVariableEntries() {
-    var ctx = Luker.getContext();
+    var ctx = getLukerContextSafe();
+    if (!ctx) return [];
     var localVars = (ctx.chatMetadata && ctx.chatMetadata.variables) ? ctx.chatMetadata.variables : {};
     return Object.keys(localVars).map(function(k) {
-        return { key: k, value: String(ctx.variables.local.get(k) || localVars[k]) };
+        var localValue = ctx.variables && ctx.variables.local && typeof ctx.variables.local.get === 'function'
+            ? ctx.variables.local.get(k)
+            : undefined;
+        return { key: k, value: String(localValue || localVars[k]) };
     });
 }
 
@@ -287,7 +426,8 @@ function applyTemplate(tmpl, state) {
 }
 
 function getAvatarHtml() {
-    var ctx = Luker.getContext();
+    var ctx = getLukerContextSafe();
+    if (!ctx) return '<i class="fa-solid fa-user"></i>';
     if (ctx.characterId == null) return '<i class="fa-solid fa-user"></i>';
     var char = ctx.characters[ctx.characterId];
     if (!char || !char.avatar) return '<i class="fa-solid fa-user"></i>';
@@ -304,7 +444,8 @@ function renderStatus() {
 // ─── 模板持久化 ───────────────────────────────────────────────────────────
 
 function getAvatarId() {
-    var ctx = Luker.getContext();
+    var ctx = getLukerContextSafe();
+    if (!ctx) return null;
     if (ctx.characterId == null) return null;
     var char = ctx.characters[ctx.characterId];
     return char ? char.avatar : null;
@@ -318,7 +459,10 @@ async function loadTemplate() {
         return;
     }
     try {
-        var data = await Luker.getContext().getCharacterState(avatarId, STATE_NS);
+        var ctx = getLukerContextSafe();
+        var data = ctx && ctx.getCharacterState
+            ? await ctx.getCharacterState(avatarId, STATE_NS)
+            : null;
         if (data && data.template) currentTemplate = data.template;
     } catch(e) { console.warn('[' + MODULE_NAME + '] loadTemplate:', e); }
 }
@@ -327,14 +471,22 @@ async function saveTemplate() {
     var avatarId = getAvatarId();
     if (!avatarId) { localStorage.setItem(MODULE_NAME + '-template', currentTemplate); return; }
     try {
-        await Luker.getContext().setCharacterState(avatarId, STATE_NS, { version:1, template: currentTemplate });
+        var ctx = getLukerContextSafe();
+        if (ctx && ctx.setCharacterState) {
+            await ctx.setCharacterState(avatarId, STATE_NS, { version:1, template: currentTemplate });
+        }
     } catch(e) { console.warn('[' + MODULE_NAME + '] saveTemplate:', e); }
 }
 
 // ─── 模板导入/导出 ────────────────────────────────────────────────────────
 
 function exportTemplate() {
-    var data  = JSON.stringify({ version: 1, theme: currentTheme, template: currentTemplate }, null, 2);
+    var data  = JSON.stringify({
+        version: 1,
+        theme: currentTheme,
+        customTheme: getCustomTheme(),
+        template: currentTemplate,
+    }, null, 2);
     var blob  = new Blob([data], { type: 'application/json' });
     var url   = URL.createObjectURL(blob);
     var a     = document.createElement('a');
@@ -353,6 +505,7 @@ function importTemplate() {
                 var data = JSON.parse(e.target.result);
                 if (!data || !data.template) { alert('模板文件格式错误'); return; }
                 currentTemplate = data.template;
+                if (data.customTheme) saveCustomTheme(data.customTheme);
                 if (data.theme) applyTheme(data.theme);
                 if ($editorModal) {
                     $editorModal.find('#cs-template-textarea').val(currentTemplate);
@@ -368,6 +521,15 @@ function importTemplate() {
 // ─── Resize 逻辑 ──────────────────────────────────────────────────────────
 
 function getPoint(e) { return e.touches ? e.touches[0] : e; }
+
+function isMobileViewport() { return window.innerWidth <= 640; }
+
+function getPositionStorageKey(storageKey) {
+    if (!isMobileViewport()) return storageKey;
+    if (storageKey === LS_BTN_POS) return LS_BTN_POS_MOBILE;
+    if (storageKey === LS_PANEL_POS) return LS_PANEL_POS_MOBILE;
+    return storageKey;
+}
 
 function initPanelResize() {
     var $handle = $panel.find('.cs-resize-handle');
@@ -437,12 +599,13 @@ function restoreEditorSize() {
 
 function initPaneDivider() {
     var $divider   = $editorModal.find('.cs-pane-divider');
-    // 拖拽分隔线时调整右侧宽度，左侧保持 flex:1 自动填充
+    // 拖拽分隔线时调整预览/变量面板尺寸，编辑区保持 flex:1 自动填充
     var $rightPane = $editorModal.find('.cs-editor-pane-right');
-    var startX, startW, isVertical, rafId;
+    var startX, startY, startW, startH, isVertical, rafId;
     function onStart(e) {
-        var pt = getPoint(e); startX = pt.clientX;
+        var pt = getPoint(e); startX = pt.clientX; startY = pt.clientY;
         startW = $rightPane.outerWidth();
+        startH = $rightPane.outerHeight();
         isVertical = window.innerWidth < 640;
         $divider.addClass('cs-dividing');
         $(document).on('mousemove.csdiv touchmove.csdiv', onMove);
@@ -450,8 +613,14 @@ function initPaneDivider() {
         e.preventDefault();
     }
     function onMove(e) {
-        if (isVertical) return;
+        e.preventDefault();
         var pt = getPoint(e);
+        if (isVertical) {
+            var dy = startY - pt.clientY;
+            var nh = Math.max(140, Math.min(window.innerHeight * 0.55, startH + dy));
+            $rightPane.css({ height: nh, width: '100%', 'flex-shrink': '0', 'flex-grow': '0' });
+            return;
+        }
         var dx  = startX - pt.clientX;
         var nw  = Math.max(160, Math.min(460, startW + dx));
         $rightPane.css({ width: nw, 'flex-shrink': '0', 'flex-grow': '0' });
@@ -486,6 +655,7 @@ function makeDraggable($el, storageKey, onClick) {
     }
     function onMove(e) {
         if (!active) return;
+        e.preventDefault();
         var pt = getPoint(e);
         var dx=pt.clientX-sx, dy=pt.clientY-sy;
         if (Math.abs(dx)>4||Math.abs(dy)>4) moved=true;
@@ -498,7 +668,7 @@ function makeDraggable($el, storageKey, onClick) {
     function onEnd() {
         if (!active) return; active=false;
         var r = $el[0].getBoundingClientRect();
-        if (storageKey) localStorage.setItem(storageKey, JSON.stringify({left:r.left,top:r.top}));
+        if (storageKey) localStorage.setItem(getPositionStorageKey(storageKey), JSON.stringify({left:r.left,top:r.top}));
         if (!moved && onClick) onClick();
     }
 
@@ -508,12 +678,7 @@ function makeDraggable($el, storageKey, onClick) {
 }
 
 function restorePosition($el, storageKey, def) {
-    // 手机端跳过存储的坐标，全交由 CSS media query 控制位置
-    if (window.innerWidth <= 640) {
-        if (def) $el.css(def);
-        return;
-    }
-    var s = localStorage.getItem(storageKey);
+    var s = localStorage.getItem(getPositionStorageKey(storageKey));
     if (s) {
         try {
             var p = JSON.parse(s);
@@ -526,6 +691,28 @@ function restorePosition($el, storageKey, def) {
             return;
         } catch(e) {}
     }
+    if (isMobileViewport()) {
+        if (storageKey === LS_BTN_POS) {
+            $el.css({
+                left: Math.max(8, window.innerWidth - 64),
+                top: Math.max(8, window.innerHeight - 148),
+                right: 'auto',
+                bottom: 'auto'
+            });
+            return;
+        }
+        if (storageKey === LS_PANEL_POS) {
+            var panelW = Math.min(320, Math.max(280, window.innerWidth - 28));
+            var panelH = Math.min(360, Math.max(260, window.innerHeight * 0.52));
+            $el.css({
+                left: Math.max(8, (window.innerWidth - panelW) / 2),
+                top: Math.max(48, window.innerHeight - panelH - 96),
+                right: 'auto',
+                bottom: 'auto'
+            });
+            return;
+        }
+    }
     if (def) $el.css(def);
 }
 
@@ -534,6 +721,7 @@ function restorePosition($el, storageKey, def) {
 function injectThemePopover() {
     if ($('#cs-theme-popover').length) return;
     $themePopover = $('<div id="cs-theme-popover"></div>');
+    var $dots = $('<div class="cs-theme-row"></div>');
     THEMES.forEach(function(t) {
         var $dot = $('<div class="cs-theme-dot" title="' + t.label + '" data-theme="' + t.id + '"'
             + ' style="background:' + t.dot + '"></div>');
@@ -541,12 +729,53 @@ function injectThemePopover() {
             applyTheme(t.id);
             $themePopover.removeClass('cs-visible');
         });
-        $themePopover.append($dot);
+        $dots.append($dot);
     });
+    var custom = getCustomTheme();
+    var $customDot = $('<div class="cs-theme-dot cs-theme-custom-dot" title="Custom" data-theme="custom"'
+        + ' style="background:' + custom.accent + '"><i class="fa-solid fa-sliders fa-2xs"></i></div>');
+    $customDot.on('click', function(e) {
+        e.stopPropagation();
+        applyTheme('custom');
+        $themePopover.find('.cs-custom-theme-editor').toggleClass('cs-visible');
+    });
+    $dots.append($customDot);
+    $themePopover.append($dots);
+
+    var $editor = $(
+        '<div class="cs-custom-theme-editor">'
+        + '<label><span>主色</span><input type="color" data-theme-field="accent"></label>'
+        + '<label><span>文字</span><input type="color" data-theme-field="text"></label>'
+        + '<label><span>背景</span><input type="color" data-theme-field="bg"></label>'
+        + '<button type="button" class="cs-theme-reset">重置</button>'
+        + '</div>'
+    );
+    function syncCustomInputs() {
+        var c = getCustomTheme();
+        $editor.find('[data-theme-field="accent"]').val(c.accent);
+        $editor.find('[data-theme-field="text"]').val(c.text);
+        $editor.find('[data-theme-field="bg"]').val(c.bg);
+        $themePopover.find('[data-theme="custom"]').css('background', c.accent);
+    }
+    $editor.on('input change', 'input[type="color"]', function() {
+        var c = getCustomTheme();
+        c[$(this).attr('data-theme-field')] = $(this).val();
+        saveCustomTheme(c);
+        applyTheme('custom');
+    });
+    $editor.find('.cs-theme-reset').on('click', function(e) {
+        e.stopPropagation();
+        saveCustomTheme(DEFAULT_CUSTOM_THEME);
+        syncCustomInputs();
+        applyTheme('custom');
+    });
+    $themePopover.append($editor);
+    syncCustomInputs();
     $panel.append($themePopover);
 
     // 标记当前主题
     $themePopover.find('[data-theme="' + currentTheme + '"]').addClass('cs-theme-active');
+    if (currentTheme === 'custom') $editor.addClass('cs-visible');
 
     // 点 panel 之外关闭 popover
     $(document).on('click.csthemepop', function(e) {
@@ -604,6 +833,7 @@ function injectStatusPanel() {
         var pt=getPoint(e), pol=r.left, pot=r.top, psx=pt.clientX, psy=pt.clientY;
         $panel.addClass('cs-dragging');
         $(document).on('mousemove.cspaneldrag touchmove.cspaneldrag', function(ev){
+            ev.preventDefault();
             var p=getPoint(ev);
             $panel.css({
                 left: Math.max(0,Math.min(window.innerWidth -$panel.outerWidth(), pol+p.clientX-psx)),
@@ -614,7 +844,7 @@ function injectStatusPanel() {
         $(document).on('mouseup.cspaneldrag touchend.cspaneldrag', function(){
             $panel.removeClass('cs-dragging');
             var r2=$panel[0].getBoundingClientRect();
-            localStorage.setItem(LS_PANEL_POS, JSON.stringify({left:r2.left,top:r2.top}));
+            localStorage.setItem(getPositionStorageKey(LS_PANEL_POS), JSON.stringify({left:r2.left,top:r2.top}));
             $(document).off('.cspaneldrag');
         });
         e.preventDefault();
@@ -843,7 +1073,8 @@ async function onChatChanged() {
 // ─── 初始化 ───────────────────────────────────────────────────────────────
 
 async function init() {
-    var ctx = Luker.getContext();
+    if (_initStarted) return;
+    _initStarted = true;
 
     ensureRoot();
     injectFloatingButton();
@@ -855,6 +1086,13 @@ async function init() {
     // 在浏览器空闲时段后台预加载 CodeMirror，避免首次打开编辑器时阻塞下载
     var idleCb = window.requestIdleCallback || function(fn){ setTimeout(fn, 200); };
     idleCb(function() { ensureCodeMirror(); });
+
+    var ctx = await waitForContext();
+    if (!ctx) {
+        await loadTemplate();
+        console.log('[' + MODULE_NAME + '] loaded UI only. Theme: ' + currentTheme);
+        return;
+    }
 
     ctx.eventSource.on(ctx.eventTypes.MESSAGE_RENDERED, onMessageRendered);
     ctx.eventSource.on(ctx.eventTypes.MESSAGE_RECEIVED, onMessageReceived);
@@ -870,4 +1108,16 @@ async function init() {
     console.log('[' + MODULE_NAME + '] loaded. Theme: ' + currentTheme);
 }
 
-jQuery(function(){ init(); });
+function startInitWhenDomReady() {
+    if (document.body) {
+        init();
+    } else {
+        document.addEventListener('DOMContentLoaded', function(){ init(); }, { once: true });
+    }
+}
+
+if (window.jQuery) {
+    jQuery(startInitWhenDomReady);
+} else {
+    startInitWhenDomReady();
+}
