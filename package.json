@@ -1,0 +1,27 @@
+{
+  "name": "luker-chara-status",
+  "version": "1.0.0",
+  "description": "CharaStatus - 角色状态栏",
+  "type": "module",
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build && move dist\\index.js . && move dist\\style.css . && rmdir /s /q dist"
+  },
+  "dependencies": {
+    "@codemirror/lang-html": "^6.1.1",
+    "@codemirror/theme-one-dark": "^6.1.2",
+    "@iconify/json": "^2.2.480",
+    "@vueuse/core": "^10.9.0",
+    "vue": "^3.4.21",
+    "vue-codemirror": "^6.1.1"
+  },
+  "devDependencies": {
+    "@iconify-json/fa-regular": "^1.2.2",
+    "@iconify-json/fa-solid": "^1.2.2",
+    "@unocss/preset-icons": "^0.58.6",
+    "@unocss/preset-uno": "^0.58.6",
+    "@vitejs/plugin-vue": "^5.0.4",
+    "unocss": "^0.58.6",
+    "vite": "^5.2.0"
+  }
+}

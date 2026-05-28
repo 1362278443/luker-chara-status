@@ -1,0 +1,103 @@
+/* src/styles/global.css */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --cs-font:       'Outfit', system-ui, -apple-system, sans-serif;
+  --cs-mono:       'JetBrains Mono', 'Fira Code', monospace;
+  
+  /* Standard Shadows */
+  --cs-shadow-sm:  0 2px 8px rgba(0,0,0,0.08);
+  --cs-shadow-md:  0 8px 24px rgba(0,0,0,0.12);
+  --cs-shadow-lg:  0 16px 40px rgba(0,0,0,0.16);
+  
+  --cs-glass-bg:   var(--cs-bg);
+  --cs-glass-border: var(--cs-border);
+}
+
+#cs-root {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  z-index: 2147483640 !important;
+  pointer-events: none !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  isolation: isolate;
+  contain: layout style;
+}
+
+#cs-root > * {
+  pointer-events: auto;
+}
+
+/* Elegant Indicator Pulse (Replaces harsh blink) */
+@keyframes cs-pulse-ring {
+  0% { transform: scale(0.8); opacity: 0.8; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+@keyframes cs-panel-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes cs-modal-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Drawer in from bottom for mobile */
+@keyframes cs-drawer-in {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+/* Base styles */
+.cs-font { font-family: var(--cs-font); -webkit-font-smoothing: antialiased; }
+.cs-mono { font-family: var(--cs-mono); font-variant-numeric: tabular-nums; }
+
+/* Template Styles - Sleek adjustments */
+.cs-card { display: flex; flex-direction: column; gap: 16px; }
+
+.cs-header { display: flex; align-items: center; gap: 14px; }
+.cs-avatar { 
+  width: 52px; height: 52px; border-radius: 50%; overflow: hidden; 
+  background: var(--cs-bg-muted); border: 1px solid var(--cs-border); 
+  display: flex; align-items: center; justify-content: center; 
+  font-size: 24px; color: var(--cs-pink); flex-shrink: 0; 
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+}
+.cs-info { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.cs-name { font-size: 17px; font-weight: 700; color: var(--cs-text); letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cs-sub { font-size: 12px; color: var(--cs-text-faint); display: flex; align-items: center; gap: 6px; font-weight: 500; }
+.cs-sub i { font-size: 0.85em; }
+
+.cs-divider { height: 1px; background: var(--cs-border); margin: 4px 0; }
+
+.cs-stats { display: flex; flex-direction: column; gap: 12px; }
+.cs-stat-row { display: flex; flex-direction: column; gap: 6px; }
+.cs-stat-head { display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 600; }
+.cs-stat-label { color: var(--cs-text-faint); display: flex; align-items: center; gap: 6px; }
+.cs-stat-value { font-weight: 700; color: var(--cs-text); font-family: var(--cs-mono); font-size: 11.5px; }
+
+.cs-track { height: 4px; border-radius: 99px; background: var(--cs-border); overflow: hidden; position: relative; }
+.cs-bar { height: 100%; border-radius: 99px; transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1); position: relative; }
+
+/* Refined single-color bars to match modern aesthetics, using the theme's accent where appropriate, but keeping semantic colors clean */
+.cs-bar-hp { background: var(--cs-pink); }
+.cs-bar-mp { background: #6366F1; } /* Indigo-500 */
+.cs-bar-sp { background: #F59E0B; } /* Amber-500 */
+
+.cs-badges { display: flex; flex-wrap: wrap; gap: 8px; }
+.cs-badge { 
+  padding: 4px 12px; border-radius: 99px; font-size: 11px; font-weight: 600; 
+  background: var(--cs-bg-muted); color: var(--cs-text-faint); border: 1px solid var(--cs-border);
+  display: flex; align-items: center; gap: 6px; transition: all 0.2s;
+}
+.cs-badge:hover { color: var(--cs-text); border-color: var(--cs-pink); background: var(--cs-bg); }
+.cs-badge i { font-size: 0.85em; opacity: 0.7; }
+
+.cs-desc { font-size: 12px; color: var(--cs-text-faint); line-height: 1.7; margin: 0; font-weight: 400; }
