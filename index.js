@@ -561,7 +561,7 @@ function injectFloatingButton() {
     if ($('#cs-float-btn').length) return;
     $btn = $('<button id="cs-float-btn" title="角色状态栏"><i class="fa-solid fa-user"></i></button>');
     ensureRoot().append($btn);
-    restorePosition($btn, LS_BTN_POS, {right:'24px',bottom:'120px'});
+    restorePosition($btn, LS_BTN_POS, {right:'20px',bottom:'20px'});
     makeDraggable($btn, LS_BTN_POS, function(){ togglePanel(); });
 }
 
@@ -594,7 +594,7 @@ function injectStatusPanel() {
         + '<div class="cs-resize-handle"></div>'
     );
     ensureRoot().append($panel);
-    restorePosition($panel, LS_PANEL_POS, {right:'86px',bottom:'120px'});
+    restorePosition($panel, LS_PANEL_POS, {right:'80px',bottom:'80px'});
     restorePanelSize();
 
     // 面板 header 拖拽（阻止 controls 区域触发）
