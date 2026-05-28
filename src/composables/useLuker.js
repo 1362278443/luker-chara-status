@@ -35,6 +35,32 @@ export function useLuker() {
     if (ctx.name2) { lukerState.char = ctx.name2; lukerState.name = ctx.name2 }
     if (ctx.name1) { lukerState.user = ctx.name1 }
     
+    // Active chat stats
+    if (ctx.chatId) { lukerState.chat_id = ctx.chatId }
+    if (ctx.characterId !== undefined && ctx.characterId !== null) { 
+      lukerState.char_id = ctx.characterId 
+    }
+    
+    if (Array.isArray(ctx.chat)) {
+      lukerState.message_count = ctx.chat.length
+      lukerState.msg_count = ctx.chat.length
+      
+      // Extract last user and character messages
+      const userMsgs = ctx.chat.filter(m => m.is_user && !m.is_system)
+      const charMsgs = ctx.chat.filter(m => !m.is_user && !m.is_system)
+      if (userMsgs.length > 0) {
+        lukerState.last_user_msg = userMsgs[userMsgs.length - 1].mes || ''
+      }
+      if (charMsgs.length > 0) {
+        lukerState.last_char_msg = charMsgs[charMsgs.length - 1].mes || ''
+      }
+    } else {
+      lukerState.message_count = 0
+      lukerState.msg_count = 0
+      lukerState.last_user_msg = ''
+      lukerState.last_char_msg = ''
+    }
+    
     const localVars = (ctx.chatMetadata && ctx.chatMetadata.variables) ? ctx.chatMetadata.variables : {}
     Object.assign(lukerState, localVars)
     
@@ -52,10 +78,20 @@ export function useLuker() {
     }
 
     // Vars for editor list
-    lukerVars.value = Object.keys(localVars).map(k => {
+    const systemList = []
+    if (ctx.name2) systemList.push({ key: 'name', value: ctx.name2, scope: 'System' })
+    if (ctx.name1) systemList.push({ key: 'user', value: ctx.name1, scope: 'System' })
+    if (ctx.chatId) systemList.push({ key: 'chat_id', value: ctx.chatId, scope: 'System' })
+    if (Array.isArray(ctx.chat)) {
+      systemList.push({ key: 'message_count', value: String(ctx.chat.length), scope: 'System' })
+    }
+    
+    const localList = Object.keys(localVars).map(k => {
       const localValue = ctx.variables?.local?.get ? ctx.variables.local.get(k) : undefined
-      return { key: k, value: String(localValue || localVars[k]) }
+      return { key: k, value: String(localValue || localVars[k]), scope: 'Local' }
     })
+    
+    lukerVars.value = [...systemList, ...localList]
 
     // Avatar
     if (ctx.characterId != null && ctx.characters?.[ctx.characterId]?.avatar) {

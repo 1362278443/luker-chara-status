@@ -78,7 +78,10 @@
                  @click="copyVar(v.key, $event)">
               <div class="flex items-center justify-between gap-[8px]">
                 <code class="cs-mono text-[12px] text-[var(--cs-pink)] bg-transparent! break-all flex-1"><span v-pre>{{</span>{{ v.key }}<span v-pre>}}</span></code>
-                <span class="text-[10px] font-extrabold p-[2px_8px] rounded-full shrink-0 bg-[var(--cs-bg-muted)] text-[var(--cs-text-faint)] border border-[var(--cs-border)] group-hover:text-[var(--cs-pink)] group-hover:border-[var(--cs-pink-pale)] transition-colors">Local</span>
+                <span class="text-[10px] font-extrabold p-[2px_8px] rounded-full shrink-0 border transition-colors"
+                      :class="v.scope === 'System' ? 'cs-tag-system' : 'cs-tag-local'">
+                  {{ v.scope }}
+                </span>
               </div>
               <div class="text-[11px] text-[var(--cs-text-faint)] mt-[6px] whitespace-nowrap overflow-hidden text-ellipsis">{{ v.value.slice(0,50) }}</div>
             </div>
@@ -310,5 +313,27 @@ function importTemplate() {
   .cs-editor-leave-to .cs-editor-modal {
     transform: translateY(100%);
   }
+}
+
+/* Custom tag styles for variable lists */
+.cs-tag-system {
+  background: rgba(99, 102, 241, 0.08);
+  color: #6366F1;
+  border: 1px solid rgba(99, 102, 241, 0.15);
+}
+.group:hover .cs-tag-system {
+  background: rgba(99, 102, 241, 0.15);
+  color: #4F46E5;
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.cs-tag-local {
+  background: var(--cs-bg-muted);
+  color: var(--cs-text-faint);
+  border: 1px solid var(--cs-border);
+}
+.group:hover .cs-tag-local {
+  color: var(--cs-pink);
+  border-color: var(--cs-pink-pale);
 }
 </style>
