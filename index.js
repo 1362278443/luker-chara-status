@@ -493,8 +493,24 @@ function makeDraggable($el, storageKey, onClick) {
 }
 
 function restorePosition($el, storageKey, def) {
+    // 手机端跳过存储的坐标，全交由 CSS media query 控制位置
+    if (window.innerWidth <= 640) {
+        if (def) $el.css(def);
+        return;
+    }
     var s = localStorage.getItem(storageKey);
-    if (s) { try { var p=JSON.parse(s); $el.css({left:p.left,top:p.top,right:'auto',bottom:'auto'}); return; } catch(e){} }
+    if (s) {
+        try {
+            var p = JSON.parse(s);
+            // 边界检查：防止元素被定位到屏幕外（如从大屏切换到小屏）
+            var w = $el.outerWidth()  || 60;
+            var h = $el.outerHeight() || 60;
+            var left = Math.max(0, Math.min(window.innerWidth  - w, p.left));
+            var top  = Math.max(0, Math.min(window.innerHeight - h, p.top));
+            $el.css({ left: left, top: top, right: 'auto', bottom: 'auto' });
+            return;
+        } catch(e) {}
+    }
     if (def) $el.css(def);
 }
 
