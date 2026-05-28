@@ -97,9 +97,24 @@ const DEFAULT_TEMPLATE = `<div class="cs-card">
 let currentTemplate = DEFAULT_TEMPLATE;
 let currentTheme    = 'sakura';
 let isPanelVisible  = false;
+let $root = null; // 独立挂载容器（参考 yuzi-phone 的 #yuzi-phone-root 模式）
 let $btn = null, $panel = null, $editorModal = null, $themePopover = null;
 let _cmEditor = null; // CodeMirror 实例
 let _suppressEditorClose = false; // 防止 resize/拖拽结束后误关弹窗
+
+// ─── 独立挂载容器 ─────────────────────────────────────────────────────────
+// 参考 yuzi-phone 的 createPhoneRoot() 模式：
+// 在 body 末尾创建一个独立容器，所有插件 DOM 都挂在里面。
+// 这个容器拥有自己的层叠上下文，彻底隔离宿主页 transform/filter 等属性对
+// position:fixed 子元素的干扰，这是移动端元素不显示的根本原因。
+function ensureRoot() {
+    if ($root) return $root;
+    var existing = document.getElementById('cs-root');
+    if (existing) { $root = $(existing); return $root; }
+    $root = $('<div id="cs-root"></div>');
+    $('body').append($root);
+    return $root;
+}
 
 
 
@@ -545,7 +560,7 @@ function injectThemePopover() {
 function injectFloatingButton() {
     if ($('#cs-float-btn').length) return;
     $btn = $('<button id="cs-float-btn" title="角色状态栏"><i class="fa-solid fa-user"></i></button>');
-    $('body').append($btn);
+    ensureRoot().append($btn);
     restorePosition($btn, LS_BTN_POS, {right:'24px',bottom:'120px'});
     makeDraggable($btn, LS_BTN_POS, function(){ togglePanel(); });
 }
@@ -578,7 +593,7 @@ function injectStatusPanel() {
         + '</div>'
         + '<div class="cs-resize-handle"></div>'
     );
-    $('body').append($panel);
+    ensureRoot().append($panel);
     restorePosition($panel, LS_PANEL_POS, {right:'86px',bottom:'120px'});
     restorePanelSize();
 
@@ -703,7 +718,7 @@ function injectEditor() {
         +   '<div class="cs-editor-resize-handle"></div>'
         + '</div>'  /* editor-wrap */
     );
-    $('body').append($editorModal);
+    ensureRoot().append($editorModal);
 
     $editorModal.find('#cs-editor-close').on('click', closeEditor);
     $editorModal.find('#cs-btn-reset').on('click', function(){
@@ -732,6 +747,24 @@ function injectEditor() {
 function showPanel() {
     if (!$panel) return;
     isPanelVisible = true;
+
+    // PC 端：将面板定位在按钮旁边（参考按钮的实时位置）
+    if ($btn && window.innerWidth > 640) {
+        var btnRect = $btn[0].getBoundingClientRect();
+        var panelW  = $panel.outerWidth()  || 260;
+        var panelH  = $panel.outerHeight() || 380;
+        var gap     = 10; // 按钮与面板的间距
+        // 优先尝试在按钮左侧打开，空间不足则右侧
+        var left = btnRect.left - panelW - gap;
+        if (left < 0) left = btnRect.right + gap;
+        // 垂直对齐按钮底部，超出屏幕时上移
+        var top = btnRect.bottom - panelH;
+        if (top < 0) top = btnRect.top;
+        top = Math.max(4, Math.min(window.innerHeight - panelH - 4, top));
+        left = Math.max(4, Math.min(window.innerWidth  - panelW - 4, left));
+        $panel.css({ left: left, top: top, right: 'auto', bottom: 'auto' });
+    }
+
     $panel.addClass('cs-visible');
     $btn.addClass('cs-active');
     renderStatus();
@@ -812,10 +845,16 @@ async function onChatChanged() {
 async function init() {
     var ctx = Luker.getContext();
 
+    ensureRoot();
     injectFloatingButton();
     injectStatusPanel();
 
     loadTheme();
+
+    // 参考 yuzi-phone preload.js 模式：
+    // 在浏览器空闲时段后台预加载 CodeMirror，避免首次打开编辑器时阻塞下载
+    var idleCb = window.requestIdleCallback || function(fn){ setTimeout(fn, 200); };
+    idleCb(function() { ensureCodeMirror(); });
 
     ctx.eventSource.on(ctx.eventTypes.MESSAGE_RENDERED, onMessageRendered);
     ctx.eventSource.on(ctx.eventTypes.MESSAGE_RECEIVED, onMessageReceived);

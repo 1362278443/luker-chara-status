@@ -20,6 +20,26 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════
+   独立根容器（参考 yuzi-phone #yuzi-phone-root 隔离模式）
+   position:fixed + inset:0 让容器铺满 viewport，pointer-events:none
+   让容器本身不拦截点击，子元素按需恢复 pointer-events。
+   isolation:isolate 创建独立层叠上下文，使内部 fixed 元素不受
+   宿主页 transform/filter 等属性影响——这是移动端不显示的根因。
+═══════════════════════════════════════════════════════════════════ */
+#cs-root {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483640 !important;
+  pointer-events: none !important;
+  isolation: isolate;
+  /* 不加 transform，避免自身又创建新的 fixed 包含块 */
+}
+/* 根容器内的直接子元素恢复指针事件 */
+#cs-root > * {
+  pointer-events: auto;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
    @keyframes
 ═══════════════════════════════════════════════════════════════════ */
 @keyframes cs-blink {
