@@ -84,12 +84,7 @@
 .cs-stat-value { font-weight: 700; color: var(--cs-text); font-family: var(--cs-mono); font-size: 11.5px; }
 
 .cs-track { height: 4px; border-radius: 99px; background: var(--cs-border); overflow: hidden; position: relative; }
-.cs-bar { height: 100%; border-radius: 99px; transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1); position: relative; }
-
-/* Refined single-color bars to match modern aesthetics, using the theme's accent where appropriate, but keeping semantic colors clean */
-.cs-bar-hp { background: var(--cs-pink); }
-.cs-bar-mp { background: #6366F1; } /* Indigo-500 */
-.cs-bar-sp { background: #F59E0B; } /* Amber-500 */
+.cs-bar { height: 100%; border-radius: 99px; transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1); position: relative; background: var(--cs-pink); }
 
 .cs-badges { display: flex; flex-wrap: wrap; gap: 8px; }
 .cs-badge { 

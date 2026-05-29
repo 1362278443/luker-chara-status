@@ -58,56 +58,130 @@
 | `{{last_char_msg}}` | 角色发送的最后一条消息的纯文本内容 | `好呀，我们出去吧！` |
 | `{{__avatar__}}` | 特殊占位符：自动渲染成极具折射折光质感的圆形角色头像 | `[圆形头像框 <img>]` |
 
-### 3. 高级 CSS 预设与变量
+### 3. HTML 模板编写与高级设计指南
 
-点击面板右上角的 **✏️ 编辑模板** 即可打开实时设计器。
+点击面板右上角的 **✏️ 编辑模板** 即可打开内置的实时设计器。插件为用户提供了强大的自定义能力与多项内置特性，您可以随心所欲设计出专属于您的属性面板。
 
-#### 💡 HTML 推荐骨架示例：
+---
+
+#### 🌟 核心渲染特性与可用变量
+
+1. **动态文本插值 `{{变量名}}`**
+   * **系统内置变量**：直接渲染如 `{{char}}`（当前角色）、`{{user}}`（您的姓名）、`{{message_count}}`（消息数）、`{{last_char_msg}}`（最后一条消息）等全局字段（不区分大小写，详情参见“系统内置全局变量”章节）。
+   * **角色自定义属性**：您在角色卡中通过 `setvar` 定义的任意变量均可作为插值。
+     * *例如*：角色卡声明 `{{setvar::location::法师塔}}` 后，模板写 `{{location}}` 即可动态输出 `法师塔`。
+
+2. **头像占位符 `{{__avatar__}}`**
+   * 特殊的内置插值。在渲染时会自动替换为一个圆形的当前角色头像 `<img>` 标签，完美适配边框且自带 lazy 懒加载。
+
+3. **内置 FontAwesome 6 图标库**
+   * 插件已全局集成 FontAwesome 6 图标。您可以在模板中使用任意小图标来丰富卡片表达，例如：
+     ```html
+     <i class="fa-solid fa-heart"></i>
+     <i class="fa-solid fa-wand-magic-sparkles"></i>
+     <i class="fa-solid fa-location-dot"></i>
+     ```
+
+4. **自适应 CSS 变量**
+   * 无论用户当前选择的是 **Sakura (蜜桃粉)** 还是 **Midnight (星空紫)**，甚至是 **Custom 自定义设计师主题**，插件都会将当前主题的配色方案注入为一组全局 CSS 变量。您可在 inline 样式或您自己的 CSS 中使用它们：
+     * `var(--cs-pink)`：主题的强调主色调（Accent Color）。
+     * `var(--cs-pink-dark)`：偏深一些的强调色。
+     * `var(--cs-pink-pale)`：极淡的主色（常用于背景或发光）。
+     * `var(--cs-text)`：自适应高对比度文本主色。
+     * `var(--cs-text-faint)`：温和的次要文本辅色（非常适合做图标、属性标签颜色）。
+     * `var(--cs-bg)`：主卡片底板背景色（带有毛玻璃般的优雅透明度）。
+     * `var(--cs-bg-muted)`：偏深/偏浅的辅助背景色（进度条轨道、徽章）。
+     * `var(--cs-border)`：极细微的边框线颜色。
+     * `var(--cs-font)`：整体高雅无衬线字体（`Outfit` 字体）。
+     * `var(--cs-mono)`：专为数据准备的极简等宽字体（`JetBrains Mono` 字体）。
+
+---
+
+#### 💡 高级 HTML 推荐骨架与自定义进度条设计：
+
+这是一个展示了如何设计自定义**进度条**、**徽章组**、及**布局卡片**的高级示例：
+
 ```html
 <div class="cs-card">
-  <!-- 头像与名称 -->
+  <!-- 头部：头像与名称信息 -->
   <div class="cs-header">
     <div class="cs-avatar">{{__avatar__}}</div>
     <div class="cs-info">
-      <div class="cs-name">{{name}}</div>
-      <div class="cs-sub"><i class="fa-solid fa-map-pin"></i> {{location}}</div>
+      <div class="cs-name">{{char}}</div>
+      <div class="cs-sub">
+        <i class="fa-solid fa-map-pin" style="color: var(--cs-pink)"></i> 
+        {{location}}
+      </div>
     </div>
   </div>
 
   <div class="cs-divider"></div>
 
-  <!-- 属性状态条 -->
+  <!-- 动态状态进度条展示 -->
   <div class="cs-stats">
+    <!-- 生命值 (HP) 示例 -->
     <div class="cs-stat-row">
       <div class="cs-stat-head">
-        <span class="cs-stat-label"><i class="fa-solid fa-heart"></i> HP</span>
+        <span class="cs-stat-label"><i class="fa-solid fa-heart" style="color: #FF6B8B"></i> 生命值</span>
         <span class="cs-stat-value">{{hp}} / {{hp_max}}</span>
       </div>
+      <!-- 进度条轨道 -->
       <div class="cs-track">
-        <div class="cs-bar cs-bar-hp" style="width: {{hp_pct}}%"></div>
+        <!-- 进度条填充：通过内联样式动态控制宽度与渐变色 -->
+        <div class="cs-bar" style="width: {{hp_pct}}%; background: linear-gradient(90deg, #FF6B8B, #FF8DA1)"></div>
+      </div>
+    </div>
+    
+    <!-- 魔法值 (MP) 示例 -->
+    <div class="cs-stat-row">
+      <div class="cs-stat-head">
+        <span class="cs-stat-label"><i class="fa-solid fa-wand-magic-sparkles" style="color: #6366F1"></i> 魔法值</span>
+        <span class="cs-stat-value">{{mp}} / {{mp_max}}</span>
+      </div>
+      <div class="cs-track">
+        <div class="cs-bar" style="width: {{mp_pct}}%; background: #6366F1"></div>
       </div>
     </div>
   </div>
 
-  <!-- 描述性段落 -->
+  <div class="cs-divider"></div>
+
+  <!-- 徽章药丸组展示 -->
+  <div class="cs-badges">
+    <span class="cs-badge"><i class="fa-solid fa-face-smile"></i> {{mood}}</span>
+    <span class="cs-badge"><i class="fa-solid fa-crown"></i> 等级 {{level}}</span>
+  </div>
+
+  <!-- 描述性介绍段落 -->
   <p class="cs-desc">{{status_desc}}</p>
 </div>
 ```
 
-#### 内置优雅 CSS 类：
+---
 
-- `cs-card`: 拥有毛玻璃边框和高级内阴影的容器。
-- `cs-avatar`: 完美的圆形头像，自带浅色发光边框。
-- `cs-name`: 突出展示角色名称（采用 `Outfit` 粗体字）。
-- `cs-sub`: 极轻的副标题，多用于地标或小标签。
-- `cs-divider`: 极致纤细的淡色水平线。
-- `cs-track`: 属性进度条的深色背景轨道。
-- `cs-bar`: 进度条填充条，支持三款高质感配色：
-  - `cs-bar-hp`: 强调粉红色（活力）
-  - `cs-bar-mp`: 高级靛蓝色（魔力）
-  - `cs-bar-sp`: 典雅琥珀色（体力）
-- `cs-badge`: 随主题自适应的精美药丸形徽章。
-- `cs-desc`: 行高经过微调的精致正文段落。
+#### 📐 内置 CSS 排版布局类解析
+
+在编写模板时，您可以直接应用下列精心调校的内置 CSS 类：
+
+| CSS 类名 | 视觉表现与最佳实践 |
+|---|---|
+| `.cs-card` | **基础卡片容器**：拥有自适应弹性布局，自动在组件之间分配 `16px` 的行间距。 |
+| `.cs-header` | **头部对齐容器**：用于对齐圆形头像和右侧文字信息。 |
+| `.cs-avatar` | **头像容器**：完美的圆形，并自带精致的内侧发光及阴影滤镜。 |
+| `.cs-info` | **文字容器**：内部采用纵向紧凑排列，用于展示名称与小地标。 |
+| `.cs-name` | **大标题**：采用 `Outfit` 粗体字，字体大小为 `17px`，对超长角色名会自动截断展示省略号。 |
+| `.cs-sub` | **辅助说明**：淡灰色（自适应主题），最适合与 FontAwesome 小图标搭配做地标或副标题。 |
+| `.cs-divider` | **极细分隔线**：高度为 `1px`，能根据当前主题自动调节线条淡化程度，分隔卡片区域。 |
+| `.cs-stats` | **状态字段组**：提供整洁的纵向间距，专门放置多行进度条。 |
+| `.cs-stat-row` | **单条状态容器**：组合文字行与进度条轨道的父类。 |
+| `.cs-stat-head` | **状态头对齐**：使用 `flex: space-between` 自动在左右两端对齐状态名与当前的数值。 |
+| `.cs-stat-label` | **状态标签**：用于为 HP/MP 或其他属性标签附加小图标，文本较淡。 |
+| `.cs-stat-value` | **数值展示**：自动启用 `JetBrains Mono` 等宽字体，显示更加严谨和精美。 |
+| `.cs-track` | **进度条黑色轨道**：拥有 `4px` 极简高度、圆角和深色半透明背景，负责容纳内部进度条。 |
+| `.cs-bar` | **进度条填充**：高度占满轨道，圆角设计，拥有 `0.6s` 极致丝滑的缓动伸缩过渡动画。默认继承当前主题强调色，您可通过内联样式 `style="background:颜色"` 自定义填充色或渐变色。 |
+| `.cs-badges` | **徽章流式布局**：自动以包裹折行（Wrap）模式对齐所有徽章，横向间距 `8px`。 |
+| `.cs-badge` | **精美药丸形徽章**：采用圆角高亮边框和半透明微阴影，悬浮或点击时会伴随柔和的色调变化与微交互动画。 |
+| `.cs-desc` | **行高正文段落**：拥有高度排版调校的行高（`1.7`），适用于展示角色的描述文本或剧情概述。 |
 
 ---
 

@@ -17,68 +17,88 @@ export interface CustomThemeData {
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
-const BG_LIGHT = 'rgba(250,250,250,0.98)'
-const BG_MUTED_LIGHT = 'rgba(244,244,245,0.8)'
-const TEXT_LIGHT = '#09090b'
-const TEXT_FAINT_LIGHT = '#71717a'
-
 export const THEMES: ThemePreset[] = [
   {
     id: 'sakura',
     label: 'Sakura',
-    dot: '#E11D48',
+    dot: '#FF8DA1',
     vars: {
-      '--cs-pink': '#E11D48', '--cs-pink-dark': '#BE123C', '--cs-pink-pale': '#FFE4E6',
-      '--cs-text': TEXT_LIGHT, '--cs-text-faint': TEXT_FAINT_LIGHT,
-      '--cs-bg': BG_LIGHT, '--cs-bg-muted': BG_MUTED_LIGHT, '--cs-border': 'rgba(225,29,72,0.15)',
+      '--cs-pink': '#FF8DA1',
+      '--cs-pink-dark': '#E57385',
+      '--cs-pink-pale': '#FFF0F2',
+      '--cs-text': '#6D2E37',
+      '--cs-text-faint': '#B38E94',
+      '--cs-bg': 'rgba(255, 245, 246, 0.98)',
+      '--cs-bg-muted': 'rgba(255, 235, 238, 0.8)',
+      '--cs-border': 'rgba(255, 141, 161, 0.2)',
     },
   },
   {
     id: 'midnight',
     label: 'Midnight',
-    dot: '#18181B',
+    dot: '#BAC2DE',
     vars: {
-      '--cs-pink': '#FAFAFA', '--cs-pink-dark': '#E4E4E7', '--cs-pink-pale': '#27272A',
-      '--cs-text': '#FAFAFA', '--cs-text-faint': '#A1A1AA',
-      '--cs-bg': 'rgba(9,9,11,0.98)', '--cs-bg-muted': 'rgba(24,24,27,0.8)', '--cs-border': 'rgba(255,255,255,0.1)',
+      '--cs-pink': '#F5C2E7',
+      '--cs-pink-dark': '#CBA6F7',
+      '--cs-pink-pale': '#313244',
+      '--cs-text': '#CDD6F4',
+      '--cs-text-faint': '#A6ADC8',
+      '--cs-bg': 'rgba(30, 30, 46, 0.98)',
+      '--cs-bg-muted': 'rgba(24, 24, 37, 0.8)',
+      '--cs-border': 'rgba(137, 180, 250, 0.15)',
     },
   },
   {
     id: 'matcha',
-    label: 'Emerald',
-    dot: '#059669',
+    label: 'Matcha',
+    dot: '#72B182',
     vars: {
-      '--cs-pink': '#059669', '--cs-pink-dark': '#047857', '--cs-pink-pale': '#D1FAE5',
-      '--cs-text': TEXT_LIGHT, '--cs-text-faint': TEXT_FAINT_LIGHT,
-      '--cs-bg': BG_LIGHT, '--cs-bg-muted': BG_MUTED_LIGHT, '--cs-border': 'rgba(5,150,105,0.15)',
+      '--cs-pink': '#72B182',
+      '--cs-pink-dark': '#5E966C',
+      '--cs-pink-pale': '#EEF7F2',
+      '--cs-text': '#2D4B36',
+      '--cs-text-faint': '#7D9885',
+      '--cs-bg': 'rgba(244, 249, 245, 0.98)',
+      '--cs-bg-muted': 'rgba(232, 243, 235, 0.8)',
+      '--cs-border': 'rgba(112, 177, 130, 0.2)',
     },
   },
   {
     id: 'amber',
     label: 'Amber',
-    dot: '#D97706',
+    dot: '#EAA06D',
     vars: {
-      '--cs-pink': '#D97706', '--cs-pink-dark': '#B45309', '--cs-pink-pale': '#FEF3C7',
-      '--cs-text': TEXT_LIGHT, '--cs-text-faint': TEXT_FAINT_LIGHT,
-      '--cs-bg': BG_LIGHT, '--cs-bg-muted': BG_MUTED_LIGHT, '--cs-border': 'rgba(217,119,6,0.15)',
+      '--cs-pink': '#EAA06D',
+      '--cs-pink-dark': '#CD8452',
+      '--cs-pink-pale': '#FFF5EE',
+      '--cs-text': '#593622',
+      '--cs-text-faint': '#9B7C6E',
+      '--cs-bg': 'rgba(254, 250, 246, 0.98)',
+      '--cs-bg-muted': 'rgba(250, 240, 230, 0.8)',
+      '--cs-border': 'rgba(234, 160, 109, 0.2)',
     },
   },
   {
     id: 'ocean',
     label: 'Ocean',
-    dot: '#0284C7',
+    dot: '#6C9FD8',
     vars: {
-      '--cs-pink': '#0284C7', '--cs-pink-dark': '#0369A1', '--cs-pink-pale': '#E0F2FE',
-      '--cs-text': TEXT_LIGHT, '--cs-text-faint': TEXT_FAINT_LIGHT,
-      '--cs-bg': BG_LIGHT, '--cs-bg-muted': BG_MUTED_LIGHT, '--cs-border': 'rgba(2,132,199,0.15)',
+      '--cs-pink': '#6C9FD8',
+      '--cs-pink-dark': '#5486BD',
+      '--cs-pink-pale': '#F0F6FC',
+      '--cs-text': '#1E3550',
+      '--cs-text-faint': '#7C92A6',
+      '--cs-bg': 'rgba(245, 248, 252, 0.98)',
+      '--cs-bg-muted': 'rgba(235, 242, 248, 0.8)',
+      '--cs-border': 'rgba(108, 159, 216, 0.2)',
     },
   },
 ]
 
 export const DEFAULT_CUSTOM_THEME: CustomThemeData = {
-  accent: '#E11D48',
-  text: '#09090b',
-  bg: '#FAFAFA',
+  accent: '#FF8DA1',
+  text: '#6D2E37',
+  bg: '#FFF5F6',
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
