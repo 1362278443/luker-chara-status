@@ -43,23 +43,28 @@
   </Transition>
 </template>
 
-<script setup>
-import { ref, watch, computed, nextTick } from 'vue'
-import { onClickOutside, useWindowSize } from '@vueuse/core'
-import { useTheme, DEFAULT_CUSTOM_THEME } from '../composables/useTheme.js'
+<script setup lang="ts">
+import { useThemeStore, DEFAULT_CUSTOM_THEME } from '@/stores/theme'
 
-const props = defineProps({
-  visible: Boolean,
-  anchorRect: Object
-})
-const emit = defineEmits(['update:visible'])
+interface Props {
+  visible: boolean
+  anchorRect: DOMRect | null
+}
 
-const popoverRef = ref(null)
-const { THEMES, currentThemeId, customThemeData } = useTheme()
+const props = defineProps<Props>()
+const emit = defineEmits<{
+  'update:visible': [value: boolean]
+}>()
+
+const popoverRef = ref<HTMLElement | null>(null)
+const themeStore = useThemeStore()
+const THEMES = themeStore.THEMES
+const { currentThemeId, customThemeData } = storeToRefs(themeStore)
+
 const showCustomEditor = ref(false)
 const { width: ww, height: wh } = useWindowSize()
 
-const computedStyle = computed(() => {
+const computedStyle = computed<Record<string, string | undefined>>(() => {
   if (!props.anchorRect) return { top: '64px', right: '16px' }
   const rect = props.anchorRect
   // Default: below and right-aligned to the button
@@ -89,17 +94,17 @@ onClickOutside(popoverRef, () => {
   emit('update:visible', false)
 })
 
-function selectTheme(id) {
+function selectTheme(id: string): void {
   currentThemeId.value = id
   emit('update:visible', false)
 }
 
-function toggleCustom() {
+function toggleCustom(): void {
   currentThemeId.value = 'custom'
   showCustomEditor.value = !showCustomEditor.value
 }
 
-function resetCustom() {
+function resetCustom(): void {
   customThemeData.value = { ...DEFAULT_CUSTOM_THEME }
 }
 </script>

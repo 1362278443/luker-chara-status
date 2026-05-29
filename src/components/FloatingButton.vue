@@ -18,20 +18,24 @@
   </button>
 </template>
 
-<script setup>
-import { ref, computed } from 'vue'
-import { useDraggable, useWindowSize, useStorage } from '@vueuse/core'
+<script setup lang="ts">
+interface Props {
+  active: boolean
+  blink: boolean
+}
 
-const props = defineProps({
-  active: Boolean,
-  blink: Boolean
-})
+defineProps<Props>()
 
-const btnRef = ref(null)
+interface ButtonPos {
+  x: number | undefined
+  y: number | undefined
+}
+
+const btnRef = ref<HTMLElement | null>(null)
 const { width: ww, height: wh } = useWindowSize()
 
 // Persistent position via vueuse storage
-const posStorage = useStorage('cs-btn-pos-v2', { x: undefined, y: undefined })
+const posStorage = useStorage<ButtonPos>('cs-btn-pos-v2', { x: undefined, y: undefined })
 
 // Compute initial value: if undefined, bottom-right corner
 const initialValue = computed(() => {
@@ -49,8 +53,8 @@ const { x, y } = useDraggable(btnRef, {
     // Boundary checks
     const w = btnRef.value?.offsetWidth || 48
     const h = btnRef.value?.offsetHeight || 48
-    let finalX = Math.max(0, Math.min(ww.value - w, position.x))
-    let finalY = Math.max(0, Math.min(wh.value - h, position.y))
+    const finalX = Math.max(0, Math.min(ww.value - w, position.x))
+    const finalY = Math.max(0, Math.min(wh.value - h, position.y))
     posStorage.value = { x: finalX, y: finalY }
   }
 })
@@ -59,8 +63,8 @@ const { x, y } = useDraggable(btnRef, {
 const style = computed(() => {
   const w = btnRef.value?.offsetWidth || 48
   const h = btnRef.value?.offsetHeight || 48
-  let finalX = Math.max(0, Math.min(ww.value - w, x.value))
-  let finalY = Math.max(0, Math.min(wh.value - h, y.value))
+  const finalX = Math.max(0, Math.min(ww.value - w, x.value))
+  const finalY = Math.max(0, Math.min(wh.value - h, y.value))
   return { left: `${finalX}px`, top: `${finalY}px` }
 })
 </script>

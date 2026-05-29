@@ -101,19 +101,27 @@
   </Transition>
 </template>
 
-<script setup>
-import { ref, computed, watch } from 'vue'
+<script setup lang="ts">
 import { Codemirror } from 'vue-codemirror'
 import { html } from '@codemirror/lang-html'
 import { oneDark } from '@codemirror/theme-one-dark'
-import { useLuker } from '../composables/useLuker.js'
-import { DEFAULT_TEMPLATE, MODULE_NAME, STATE_NS } from '../constants.js'
-import { useStorage, useWindowSize } from '@vueuse/core'
+import { useLukerStore, getLukerContextSafe } from '@/stores/luker'
+import { DEFAULT_TEMPLATE, MODULE_NAME, STATE_NS } from '@/constants'
 
-const props = defineProps({ visible: Boolean, initialTemplate: String })
-const emit = defineEmits(['update:visible', 'template-saved'])
+interface Props {
+  visible: boolean
+  initialTemplate: string
+}
 
-const { lukerState, lukerVars, avatarHtml, getAvatarId, getLukerContextSafe } = useLuker()
+const props = defineProps<Props>()
+const emit = defineEmits<{
+  'update:visible': [value: boolean]
+  'template-saved': [tmpl: string]
+}>()
+
+const lukerStore = useLukerStore()
+const { lukerState, lukerVars, avatarHtml } = storeToRefs(lukerStore)
+
 const { width: ww } = useWindowSize()
 const isMobile = computed(() => ww.value <= 640)
 
@@ -124,10 +132,10 @@ const saved = ref(false)
 
 // Preview Update
 const previewHtml = computed(() => {
-  let tmpl = code.value.replace('{{__avatar__}}', avatarHtml.value)
-  return tmpl.replace(/\{\{([a-zA-Z_][a-zA-Z0-9_.]*)\}\}/g, (match, key) => {
+  const tmpl = code.value.replace('{{__avatar__}}', avatarHtml.value)
+  return tmpl.replace(/\{\{([a-zA-Z_][a-zA-Z0-9_.]*)\}\}/g, (match, key: string) => {
     const k = key.toLowerCase()
-    let val = lukerState[k] !== undefined ? lukerState[k] : lukerState[key]
+    const val = lukerState.value[k] !== undefined ? lukerState.value[k] : lukerState.value[key]
     return val !== undefined ? String(val) : match
   })
 })
@@ -137,46 +145,61 @@ watch(() => props.visible, (val) => {
 })
 
 // Window Resizing
-const wrapRef = ref(null)
-const winSize = useStorage('cs-editor-size', { w: 900, h: 640 })
+interface WinSize {
+  w: number
+  h: number
+}
+const wrapRef = ref<HTMLElement | null>(null)
+const winSize = useStorage<WinSize>('cs-editor-size', { w: 900, h: 640 })
 const wrapStyle = computed(() => isMobile.value ? {} : { width: `${winSize.value.w}px`, height: `${winSize.value.h}px` })
 
-function startWindowDrag(e) {
+function startWindowDrag(e: MouseEvent | TouchEvent): void {
   if (isMobile.value) return
   e.preventDefault()
-  const pt = e.touches ? e.touches[0] : e
-  const startX = pt.clientX, startY = pt.clientY
-  const startW = wrapRef.value.offsetWidth, startH = wrapRef.value.offsetHeight
+  const pt = (e as TouchEvent).touches ? (e as TouchEvent).touches[0] : (e as MouseEvent)
+  const startX = pt.clientX
+  const startY = pt.clientY
+  const startW = wrapRef.value!.offsetWidth
+  const startH = wrapRef.value!.offsetHeight
   
-  const move = (ev) => {
-    const p = ev.touches ? ev.touches[0] : ev
+  const move = (ev: MouseEvent | TouchEvent) => {
+    const p = (ev as TouchEvent).touches ? (ev as TouchEvent).touches[0] : (ev as MouseEvent)
     winSize.value = {
       w: Math.max(480, Math.min(window.innerWidth * 0.95, startW + p.clientX - startX)),
       h: Math.max(360, Math.min(window.innerHeight * 0.92, startH + p.clientY - startY))
     }
   }
   const end = () => {
-    document.removeEventListener('mousemove', move); document.removeEventListener('touchmove', move)
-    document.removeEventListener('mouseup', end); document.removeEventListener('touchend', end)
+    document.removeEventListener('mousemove', move as EventListener)
+    document.removeEventListener('touchmove', move as EventListener)
+    document.removeEventListener('mouseup', end)
+    document.removeEventListener('touchend', end)
   }
-  document.addEventListener('mousemove', move); document.addEventListener('touchmove', move)
-  document.addEventListener('mouseup', end); document.addEventListener('touchend', end)
+  document.addEventListener('mousemove', move as EventListener)
+  document.addEventListener('touchmove', move as EventListener)
+  document.addEventListener('mouseup', end)
+  document.addEventListener('touchend', end)
 }
 
 // Pane Divider
-const paneSize = useStorage('cs-pane-size', { rightW: 300, rightH: 250 })
+interface PaneSize {
+  rightW: number
+  rightH: number
+}
+const paneSize = useStorage<PaneSize>('cs-pane-size', { rightW: 300, rightH: 250 })
 const rightPaneStyle = computed(() => isMobile.value ? { height: `${paneSize.value.rightH}px` } : { width: `${paneSize.value.rightW}px` })
 const leftPaneStyle = computed(() => ({}))
 
-function startDividerDrag(e) {
+function startDividerDrag(e: MouseEvent | TouchEvent): void {
   e.preventDefault()
-  const pt = e.touches ? e.touches[0] : e
-  const startX = pt.clientX, startY = pt.clientY
+  const pt = (e as TouchEvent).touches ? (e as TouchEvent).touches[0] : (e as MouseEvent)
+  const startX = pt.clientX
+  const startY = pt.clientY
   const startRightW = paneSize.value.rightW
   const startRightH = paneSize.value.rightH
   
-  const move = (ev) => {
-    const p = ev.touches ? ev.touches[0] : ev
+  const move = (ev: MouseEvent | TouchEvent) => {
+    const p = (ev as TouchEvent).touches ? (ev as TouchEvent).touches[0] : (ev as MouseEvent)
     if (isMobile.value) {
       paneSize.value.rightH = Math.max(140, Math.min(window.innerHeight * 0.55, startRightH - (p.clientY - startY)))
     } else {
@@ -184,22 +207,26 @@ function startDividerDrag(e) {
     }
   }
   const end = () => {
-    document.removeEventListener('mousemove', move); document.removeEventListener('touchmove', move)
-    document.removeEventListener('mouseup', end); document.removeEventListener('touchend', end)
+    document.removeEventListener('mousemove', move as EventListener)
+    document.removeEventListener('touchmove', move as EventListener)
+    document.removeEventListener('mouseup', end)
+    document.removeEventListener('touchend', end)
   }
-  document.addEventListener('mousemove', move); document.addEventListener('touchmove', move)
-  document.addEventListener('mouseup', end); document.addEventListener('touchend', end)
+  document.addEventListener('mousemove', move as EventListener)
+  document.addEventListener('touchmove', move as EventListener)
+  document.addEventListener('mouseup', end)
+  document.addEventListener('touchend', end)
 }
 
 // Actions
-function close() { emit('update:visible', false) }
+function close(): void { emit('update:visible', false) }
 
-function resetToDefault() {
+function resetToDefault(): void {
   if (confirm('确定恢复默认模板？')) code.value = DEFAULT_TEMPLATE
 }
 
-async function save() {
-  const avatarId = getAvatarId()
+async function save(): Promise<void> {
+  const avatarId = lukerStore.getAvatarId()
   const tmpl = code.value
   
   if (avatarId) {
@@ -207,7 +234,7 @@ async function save() {
     if (ctx && ctx.setCharacterState) {
       try {
         await ctx.setCharacterState(avatarId, STATE_NS, { version: 1, template: tmpl })
-      } catch(e) {}
+      } catch { /* ignore */ }
     }
   } else {
     localStorage.setItem(`${MODULE_NAME}-template`, tmpl)
@@ -215,22 +242,23 @@ async function save() {
       const ctx = getLukerContextSafe()
       if (ctx && ctx.extensionSettings) {
         if (!ctx.extensionSettings[MODULE_NAME]) ctx.extensionSettings[MODULE_NAME] = {}
-        ctx.extensionSettings[MODULE_NAME].template = tmpl
+        const ext = ctx.extensionSettings[MODULE_NAME] as Record<string, unknown>
+        ext['template'] = tmpl
         if (ctx.saveSettingsDebounced) ctx.saveSettingsDebounced()
       }
-    } catch(e) {}
+    } catch { /* ignore */ }
   }
   
   saved.value = true
   emit('template-saved', tmpl)
-  setTimeout(() => saved.value = false, 1500)
+  setTimeout(() => (saved.value = false), 1500)
   close()
 }
 
-function copyVar(key, e) {
+function copyVar(key: string, e: MouseEvent): void {
   const ph = `{{${key}}}`
-  if (navigator.clipboard) navigator.clipboard.writeText(ph).catch(()=>{})
-  const el = e.currentTarget
+  if (navigator.clipboard) navigator.clipboard.writeText(ph).catch(() => {})
+  const el = e.currentTarget as HTMLElement
   el.style.borderColor = 'var(--cs-pink)'
   el.style.background = 'var(--cs-pink-pale)'
   el.style.transform = 'scale(0.96)'
@@ -241,35 +269,42 @@ function copyVar(key, e) {
   }, 300)
 }
 
-function exportTemplate() {
+function exportTemplate(): void {
   const data = JSON.stringify({
-    version: 1, theme: localStorage.getItem('cs-theme') || 'sakura',
+    version: 1,
+    theme: localStorage.getItem('cs-theme') || 'sakura',
     customTheme: JSON.parse(localStorage.getItem('cs-custom-theme') || '{}'),
     template: code.value
   }, null, 2)
   const blob = new Blob([data], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
-  a.href = url; a.download = 'chara-status-template.json'; a.click()
+  a.href = url
+  a.download = 'chara-status-template.json'
+  a.click()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
-function importTemplate() {
+function importTemplate(): void {
   const input = document.createElement('input')
-  input.type = 'file'; input.accept = '.json,application/json'
+  input.type = 'file'
+  input.accept = '.json,application/json'
   input.onchange = () => {
-    const file = input.files[0]
+    const file = input.files?.[0]
     if (!file) return
     const reader = new FileReader()
     reader.onload = (e) => {
       try {
-        const data = JSON.parse(e.target.result)
+        const result = e.target?.result
+        if (typeof result !== 'string') return
+        const data = JSON.parse(result)
         if (!data || !data.template) return alert('模板文件格式错误')
         code.value = data.template
         if (data.customTheme) localStorage.setItem('cs-custom-theme', JSON.stringify(data.customTheme))
         if (data.theme) localStorage.setItem('cs-theme', data.theme)
-        // Refresh full reload maybe needed for theme, but fine for now
-      } catch(err) { alert('模板文件解析失败') }
+      } catch {
+        alert('模板文件解析失败')
+      }
     }
     reader.readAsText(file)
   }

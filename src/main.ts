@@ -1,21 +1,22 @@
 import { createApp } from 'vue'
+import { createPinia } from 'pinia'
 import App from './App.vue'
 import './styles/global.css'
 import 'virtual:uno.css'
 
-function ensureRoot() {
+function ensureRoot(): HTMLElement {
   let root = document.getElementById('cs-root')
   if (root) return root
   root = document.createElement('div')
   root.id = 'cs-root'
-  const parent = document.body ? document.body : document.documentElement
-  parent.appendChild(root)
+  ;(document.body ?? document.documentElement).appendChild(root)
   return root
 }
 
-function init() {
+function init(): void {
   const root = ensureRoot()
   const app = createApp(App)
+  app.use(createPinia())
   app.mount(root)
   console.log('[chara-status] Vue app mounted.')
 }

@@ -1,5 +1,5 @@
-export const MODULE_NAME = 'chara-status'
-export const STATE_NS = 'chara_status_settings'
+export const MODULE_NAME = 'chara-status' as const
+export const STATE_NS = 'chara_status_settings' as const
 
 export const DEFAULT_TEMPLATE = `<div class="cs-card">
 
