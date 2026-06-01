@@ -43,7 +43,7 @@
 
       <!-- Content (Rendered template) -->
       <div
-        class="relative z-1 flex-1 overflow-y-auto p-[16px] [scrollbar-width:thin] [scrollbar-color:var(--cs-border)_transparent] text-[var(--cs-text)]"
+        class="relative z-1 flex-1 overflow-y-auto overflow-x-hidden p-[16px] [scrollbar-width:thin] [scrollbar-color:var(--cs-border)_transparent] text-[var(--cs-text)]"
         v-html="renderedHtml"
       ></div>
 

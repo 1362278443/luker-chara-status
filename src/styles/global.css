@@ -95,4 +95,14 @@
 .cs-badge:hover { color: var(--cs-text); border-color: var(--cs-pink); background: var(--cs-bg); }
 .cs-badge i { font-size: 0.85em; opacity: 0.7; }
 
-.cs-desc { font-size: 12px; color: var(--cs-text-faint); line-height: 1.7; margin: 0; font-weight: 400; }
+.cs-desc {
+  font-size: 12px;
+  color: var(--cs-text-faint);
+  line-height: 1.7;
+  margin: 0;
+  font-weight: 400;
+  word-break: break-all;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+}
+
